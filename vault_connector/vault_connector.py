@@ -51,7 +51,7 @@ class VaultConnector:
         """
 
         method_name:str = inspect.currentframe().f_code.co_name
-        self.logger.debug(f'{method_name} - called')
+        self.logger.debug(f"{method_name} - called")
 
         self.username = username
         self.password = password
@@ -69,7 +69,7 @@ class VaultConnector:
                 self.logger.debug(f"{method_name} - Successful Login")
                 return True
             else:
-                self.logger.error(f'{method_name} - {response.get("responseMessage")}')
+                self.logger.error(f"{method_name} - {response.get('responseMessage')}")
                 return False
             
         except Exception as e:
@@ -86,7 +86,7 @@ class VaultConnector:
             session_id (str): session id
         """
         method_name:str = inspect.currentframe().f_code.co_name
-        self.logger.debug(f'{method_name} called')
+        self.logger.debug(f"{method_name} called")
         self.session_id = session_id
 
 
@@ -104,11 +104,11 @@ class VaultConnector:
         """
 
         method_name:str = inspect.currentframe().f_code.co_name
-        self.logger.debug(f'{method_name} called')
+        self.logger.debug(f"{method_name} called")
 
         if pagesize == 0:
             pagesize = __class__.query_page_size
-            self.logger.debug(f'{method_name} - Page size set to default ({__class__.query_page_size})')
+            self.logger.debug(f"{method_name} - Page size set to default ({__class__.query_page_size})")
 
         retval = self.__get_retval_instance()
 
@@ -117,14 +117,14 @@ class VaultConnector:
             return retval
 
         request_url = self.api_endpoint_url + "/query"
-        self.logger.debug(f'{method_name} - request URL: {request_url}')
+        self.logger.debug(f"{method_name} - request URL: {request_url}")
         request_headers = {
             "Authorization": self.session_id,
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
         }
 
-        self.logger.debug(f'{method_name} - Sending Query: {query}')
+        self.logger.debug(f"{method_name} - Sending Query: {query}")
 
         r = requests.post(url=request_url, headers=request_headers, data={"q": query})
         response = r.json()
@@ -135,10 +135,10 @@ class VaultConnector:
                     "responseStatus":__class__.statuses.get("FAILURE"),
                     "data":"[]"
                     })
-            self.logger.error(f'{response.get("errors")[0].get("type")} - {response.get("errors")[0].get("message")}')
+            self.logger.error(f"{response.get('errors')[0].get('type')} - {response.get('errors')[0].get('message')}")
             return retval
         
-        self.logger.debug(f'{method_name} - Total number of records: {response.get("responseDetails").get('total')}')
+        self.logger.debug(f"{method_name} - Total number of records: {response.get('responseDetails').get('total')}")
         
         retval.update({'responseStatus':__class__.statuses.get('SUCCESS')})
 
@@ -182,13 +182,13 @@ class VaultConnector:
             dict: a dictionary of the results
         """
         method_name:str = inspect.currentframe().f_code.co_name
-        self.logger.debug(f'{method_name} called')
+        self.logger.debug(f"{method_name} called")
 
         return self.__upsert(operation="update", object=object, data=data, id_param=id_param)
     
 
 
-    def insert(self, object: str, data: list, id_param="id") -> dict:
+    def insert(self, object: str, data: list, id_param:str=None) -> dict:
         """ Insert records of the give objects. using the id_param parameter with an external id, this method can be used for upsert operations.
 
         Args:
@@ -200,7 +200,7 @@ class VaultConnector:
             dict: a dictionary of the results
         """
         method_name:str = inspect.currentframe().f_code.co_name
-        self.logger.debug(f'{method_name} called')
+        self.logger.debug(f"{method_name} called")
 
         return self.__upsert(operation="insert", object=object, data=data, id_param=id_param)
 
@@ -223,9 +223,9 @@ class VaultConnector:
         method_name:str = inspect.currentframe().f_code.co_name
         retval = self.__get_retval_instance()
 
-        request_url = (
-            f"{self.api_endpoint_url}/vobjects/{object}?idParam={id_param}"
-        )
+        request_url = f"{self.api_endpoint_url}/vobjects/{object}"
+        if id_param:
+            request_url += f"?idParam={id_param}"
 
         self.logger.debug(f"{method_name} - request URL: {request_url}")
         self.logger.debug(f"{method_name} - target object: {object}")
@@ -260,7 +260,7 @@ class VaultConnector:
                     "responseStatus":__class__.statuses.get("FAILURE"),
                     "data":"[]"
                     })
-                self.logger.error(f'{response.get("errors")[0].get("type")} - {response.get("errors")[0].get("message")}')
+                self.logger.error(f"{response.get('errors')[0].get('type')} - {response.get('errors')[0].get('message')}")
                 return retval
 
             else:

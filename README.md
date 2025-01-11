@@ -164,19 +164,20 @@ On ```SUCCESS``` the method returns a responseStatus for each individual record 
 ## Insert Record
 
 ```python
-vc.insert(object="<OBJECT API NAME>", data=[<RECORDS TO UPDATE>], id_param="UNIQUE FIELD NAME | DEFAULT: id")
+vc.insert(object="<OBJECT API NAME>", data=[<RECORDS TO UPDATE>], id_param="UNIQUE FIELD NAME | DEFAULT: None")
 ```
 
 - ```object_name```: that API name of the object the insert operation should run on. e.g. ```account__v```
-- ```data```: list of records represented as Python dictionaries e.g.
-```id_param```: Optional. To set a field to be used as identifier. Any fields can be used that is set to ```unique``` in the Vault data model. In insert operations this attribute can be used for upsert operation.
-
+- ```data```: list of records represented as Python dictionaries. e.g.
 ```python
 {
 'name__v':'Test Record',
 'description__c':'Test Description'
 }
 ```
+- ```id_param```: Optional. To set a field to be used as identifier. Any fields can be used that is set to ```unique``` in the Vault data model. In insert operations this attribute can be used for upsert operation.
+
+
 
 ### Return Value
 
