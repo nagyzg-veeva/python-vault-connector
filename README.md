@@ -170,10 +170,16 @@ vc.insert(object="<OBJECT API NAME>", data=[<RECORDS TO UPDATE>], id_param="UNIQ
 - ```object_name```: that API name of the object the insert operation should run on. e.g. ```account__v```
 - ```data```: list of records represented as Python dictionaries. e.g.
 ```python
-{
-'name__v':'Test Record',
-'description__c':'Test Description'
-}
+[
+    {
+        'name__v':'Test Record-1',
+        'description__c':'Test Description-1'
+    },
+    {
+        'name__v':'Test Record-2',
+        'description__c':'Test Description-2'
+    }
+]
 ```
 - ```id_param```: Optional. To set a field to be used as identifier. Any fields can be used that is set to ```unique``` in the Vault data model. In insert operations this attribute can be used for upsert operation.
 
