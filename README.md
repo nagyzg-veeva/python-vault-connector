@@ -6,7 +6,8 @@ General purpose Veeva Vault connector module in Python.
 - Running VQL queries, with paging support
 - Insert / Update / Upsert object operations with batch size handling
 - Username / Password authentication or using external session ID
-- Build in logging to standard output, or in a given log file. 
+- OAuth 2.0 Client Credentials Flow
+- Build in logging to standard output, or in a given log file.
 
 ## Usage
 
@@ -51,10 +52,16 @@ login_result:bool = vc.login(username="<USERNAME>", password="<PASSWORD>")
 
 The method has a ```boolean``` return value. In case of any errors, the return value will be set to ```False```, and the error will be sent to the log.
 
-Alterantivelly the ```Session ID``` can be set explicitelly using the ```set_session_id``` method.
+Alternatively, you can authenticate using OAuth 2.0:
 
 ```python
-vc.set_sesson_id(session_id:"<SESSION ID>")
+login_result:bool = vc.login_oauth(username="<USERNAME>", client_id="<CLIENT_ID>", client_secret="<CLIENT_SECRET>", scopes=["<SCOPE1>", "<SCOPE2>"])
+```
+
+Or, the ```Session ID``` can be set explicitelly using the ```set_session_id``` method.
+
+```python
+vc.set_session_id(session_id:"<SESSION ID>")
 ```
 
 
@@ -97,12 +104,14 @@ The return value is a dictionary with two element:
 ## Update Records
 
 ```python
-vc.update(object="<OBJECT API NAME>", data=[<RECORDS TO UPDATE>], id_param="UNIQUE FIELD NAME | DEFAULT: id")
+vc.update(object="<OBJECT API NAME>", data=[<RECORDS TO UPDATE>], id_param="UNIQUE FIELD NAME | DEFAULT: id", migration_mode=False, no_triggers=False)
 ```
 
 - ```object_name```: that API name of the object the update operation should run on. e.g. ```account__v```
-- ```data```: list of records represented as Python dictionaries e.g. 
+- ```data```: list of records represented as Python dictionaries e.g.
 - ```id_param```: Optional. To set a field to be used as adintifier. Any fields can be used that is set to ```unique``` in the Vault data model
+- ```migration_mode```: Optional. If True, adds the X-VaultAPI-MigrationMode header. Defaults to False.
+- ```no_triggers```: Optional. If True, adds the X-VaultAPI-NoTriggers header. Defaults to False.
 
 ```python
 {
@@ -164,11 +173,13 @@ On ```SUCCESS``` the method returns a responseStatus for each individual record 
 ## Insert Record
 
 ```python
-vc.insert(object="<OBJECT API NAME>", data=[<RECORDS TO UPDATE>], id_param="UNIQUE FIELD NAME | DEFAULT: None")
+vc.insert(object="<OBJECT API NAME>", data=[<RECORDS TO UPDATE>], id_param="UNIQUE FIELD NAME | DEFAULT: None", migration_mode=False, no_triggers=False)
 ```
 
 - ```object_name```: that API name of the object the insert operation should run on. e.g. ```account__v```
 - ```data```: list of records represented as Python dictionaries. e.g.
+- ```migration_mode```: Optional. If True, adds the X-VaultAPI-MigrationMode header. Defaults to False.
+- ```no_triggers```: Optional. If True, adds the X-VaultAPI-NoTriggers header. Defaults to False.
 ```python
 [
     {
