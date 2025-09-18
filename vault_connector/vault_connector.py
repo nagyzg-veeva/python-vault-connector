@@ -6,19 +6,13 @@ import inspect
 
 
 class VaultConnector:
-    """A connector class for interacting with Veeva Vault APIs.
-    
-    This class provides methods to authenticate, query, insert, and update data
-    in Veeva Vault using both basic authentication and OAuth 2.0 client credentials flow.
-    
-    Attributes:
-        api_version (str): The Vault API version to use (default: "v25.2")
-        timeout (int): Request timeout in seconds (default: 120)
-        upsert_page_size (int): Page size for insert/update operations (default: 500)
-        query_page_size (int): Page size for query operations (default: 1000)
-        statuses (dict): Dictionary mapping status strings
-        user_discovery_endpoint (str): Endpoint for user authentication discovery
+    """A connector for the Veeva Vault API.
+
+    This class handles authentication (both basic and OAuth 2.0) and provides
+    methods for interacting with the Vault API, including querying, inserting,
+    and updating records.
     """
+    
 
     api_version:str = "v25.2"
     timeout:int = 120
@@ -33,21 +27,18 @@ class VaultConnector:
 
 
     def __init__(self, hostname:str, log_level:str='error', log_target:str='console') -> None:
-        """
-        Initialize the VaultConnector instance.
+        """Initializes the VaultConnector for interacting with the Veeva Vault API.
+
+        This constructor sets up the connection parameters and configures logging.
 
         Args:
-            hostname (str): Vault hostname without the protocol prefix (e.g., 'myvault.veevavault.com')
-            log_level (str, optional): Logging level: 'debug' for detailed logs, 'error' for errors only.
-                                      Defaults to 'error'.
-            log_target (str, optional): Defines where log messages are sent. 'console' for standard output,
-                                       or a filename for file logging. Defaults to 'console'.
-
-        Note:
-            The constructor sets up base URLs and initializes the logger but does not establish
-            a session. Call login() or login_oauth() to authenticate.
+            hostname (str): The full hostname of the Vault instance (e.g., 'your-instance.veevavault.com').
+            log_level (str, optional): The logging level to use. Can be 'debug', 'info', 'warning', 'error', or 'critical'.
+                                     Defaults to 'error'.
+            log_target (str, optional): Specifies where to send logs. Can be 'console' to output to the standard stream
+                                      or a file path (e.g., '/path/to/log.txt'). Defaults to 'console'.
         """
-
+       
         self.password:str = None
         self.username:str = None
         self.vault_hostname:str = hostname
@@ -59,25 +50,22 @@ class VaultConnector:
 
 
     def login_oauth(self, username:str, client_id:str, client_secret:str, scopes:list = []) -> bool:
-        """
-        Authenticate with Vault using OAuth 2.0 client credentials flow.
+        """Logs in to Vault using the OAuth 2.0 Client Credentials Flow.
 
-        This method performs OAuth authentication by:
-        1. Discovering the authentication profile for the client ID
-        2. Obtaining an access token from the token endpoint
-        3. Exchanging the access token for a Vault session ID
+        This method authenticates the user by discovering the OAuth profile, obtaining an access token,
+        and then exchanging it for a Vault session ID.
 
         Args:
-            client_id (str): OAuth client ID for authentication
-            client_secret (str): OAuth client secret for authentication
-            scopes (list, optional): List of OAuth scopes to request. Defaults to [].
+            username (str): The username for which to discover the OAuth profile.
+            client_id (str): The client ID of the OAuth 2.0 application configured in Vault.
+            client_secret (str): The client secret of the OAuth 2.0 application.
+            scopes (list, optional): A list of OAuth scopes to request. If empty, the default scopes will be used.
+                                     Defaults to [].
 
         Returns:
-            bool: True if authentication was successful, False otherwise
-
-        Raises:
-            Various network and authentication errors may be logged but not raised
+            bool: True if the login is successful and a session ID is obtained, False otherwise.
         """
+        
         
         method_name:str = inspect.currentframe().f_code.co_name
         self.logger.debug(f"{method_name} - called")
@@ -117,22 +105,19 @@ class VaultConnector:
 
 
     def login(self, username:str, password:str) -> bool:
-        """
-        Authenticate with Vault using username and password.
+        """Logs in to Vault using basic authentication with a username and password.
 
-        Performs basic authentication by sending credentials to the Vault auth endpoint
-        and stores the session ID for subsequent API calls.
+        This method sends a POST request to the Vault authentication endpoint and stores the
+        session ID upon a successful response.
 
         Args:
-            username (str): Vault username for authentication
-            password (str): Vault password for authentication
+            username (str): The user's Vault username.
+            password (str): The user's Vault password.
 
         Returns:
-            bool: True if authentication was successful, False otherwise
-
-        Raises:
-            Various network and authentication errors may be logged but not raised
+            bool: True if the login is successful and a session ID is obtained, False otherwise.
         """
+       
 
         method_name:str = inspect.currentframe().f_code.co_name
         self.logger.debug(f"{method_name} - called")
@@ -142,9 +127,11 @@ class VaultConnector:
 
         request_body = {"username": self.username, "password": self.password}
         request_url = self.api_endpoint_url + "/auth"
+        
+        request_headers = {}
 
         try:
-            r = requests.post(request_url, data=request_body)
+            r = requests.post(request_url, data=request_body, headers=request_headers)
             r.raise_for_status()
             response = r.json()
 
@@ -163,15 +150,15 @@ class VaultConnector:
 
 
     def set_session_id(self, session_id: str) -> None:
-        """
-        Set the session ID for external authentication scenarios.
+        """Manually sets the session ID for the connector.
 
-        Use this method when you have obtained a session ID through other means
-        (e.g., from another authentication system) and want to use it with this connector.
+        This method is useful when the session ID has been obtained through an external
+        process and needs to be used for subsequent API calls.
 
         Args:
-            session_id (str): Valid Vault session ID to use for API authentication
+            session_id (str): The Vault session ID to set.
         """
+        
         method_name:str = inspect.currentframe().f_code.co_name
         self.logger.debug(f"{method_name} called")
         self.session_id = session_id
@@ -179,24 +166,20 @@ class VaultConnector:
 
 
     def query(self, query:str, pagesize:int=0) -> list:
-        """
-        Execute a VQL query with automatic pagination handling.
+        """Executes a VQL (Vault Query Language) query and retrieves the results.
 
-        This method sends a Vault Query Language (VQL) query to the Vault API and
-        automatically handles pagination to retrieve all results.
+        This method handles pagination automatically to fetch all records matching the query.
 
         Args:
-            query (str): VQL query string to execute
-            pagesize (int, optional): Page size for result iteration. If 0, uses the
-                                    class default (1000). Defaults to 0.
+            query (str): The VQL query string to execute.
+            pagesize (int, optional): The number of records to retrieve per page. If 0, it defaults to the
+                                      class-level `query_page_size` (1000).
 
         Returns:
-            list: List of records from the query result set, with standard response structure
-
-        Note:
-            The return value follows the standard response format with 'responseStatus'
-            and 'data' fields. Empty results return an empty list in 'data'.
+            list: A list of dictionaries, where each dictionary represents a record from the query result.
+                  In case of failure, it returns a dictionary with a 'responseStatus' of 'FAILURE'.
         """
+       
 
         method_name:str = inspect.currentframe().f_code.co_name
         self.logger.debug(f"{method_name} called")
@@ -218,7 +201,7 @@ class VaultConnector:
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
         }
-
+       
         self.logger.debug(f"{method_name} - Sending Query: {query}")
 
         r = requests.post(url=request_url, headers=request_headers, data={"q": query})
@@ -265,78 +248,74 @@ class VaultConnector:
     
 
 
-    def update(self, object: str, data: list, id_param="id") -> dict:
-        """Update existing records in the specified Vault object.
+    def update(self, object: str, data: list, id_param="id", migration_mode:bool=False, no_triggers:bool=False) -> dict:
+        """Updates existing records for a specified Vault object.
 
-        This method updates multiple records in a Vault object using the specified
-        identifier parameter. Records are processed in chunks according to the
-        configured page size.
+        This method is a convenient wrapper around the private `__upsert` method, pre-setting the
+        operation to 'update'.
 
         Args:
-            object (str): API name of the Vault object to update (e.g., 'document__v')
-            data (list): List of record dictionaries to update
-            id_param (str, optional): Field name to use as identifier for the update
-                                    operation. Defaults to "id".
+            object (str): The API name of the Vault object where records will be updated (e.g., 'documents__v').
+            data (list): A list of dictionaries, where each dictionary represents a record to be updated.
+            id_param (str, optional): The field name to use as the external ID for matching records.
+                                      Defaults to "id".
+            migration_mode (bool, optional): If True, sets the 'X-VaultAPI-MigrationMode' header, which may alter
+                                             system behavior for data migration scenarios. Defaults to False.
 
         Returns:
-            dict: Dictionary containing operation results with 'responseStatus' and 'data'
-
-        Note:
-            The method uses the private __upsert method with operation="update"
+            dict: The response from the Vault API, which includes the status of the operation and details
+                  about the updated records.
         """
+       
         method_name:str = inspect.currentframe().f_code.co_name
         self.logger.debug(f"{method_name} called")
 
-        return self.__upsert(operation="update", object=object, data=data, id_param=id_param)
+        return self.__upsert(operation="update", object=object, data=data, id_param=id_param, migration_mode=migration_mode, no_triggers=no_triggers)
     
 
 
-    def insert(self, object: str, data: list, id_param:str=None) -> dict:
-        """Insert new records into the specified Vault object.
+    def insert(self, object: str, data: list, id_param:str=None, migration_mode:bool=False, no_triggers:bool=False) -> dict:
+        """Inserts new records into a specified Vault object.
 
-        This method inserts multiple records into a Vault object. When used with
-        an id_param, it can perform upsert operations (insert or update based on
-        whether the record exists).
+        This method serves as a wrapper for the `__upsert` method, with the operation fixed to 'insert'.
 
         Args:
-            object (str): API name of the Vault object to insert into (e.g., 'document__v')
-            data (list): List of record dictionaries to insert
-            id_param (str, optional): Field name to use as identifier for upsert
-                                    operations. If None, pure insert is performed.
-                                    Defaults to None.
+            object (str): The API name of the Vault object for the insertion (e.g., 'products__v').
+            data (list): A list of dictionaries, where each dictionary represents a new record.
+            id_param (str, optional): The field to use as an external ID, if applicable. Defaults to None.
+            migration_mode (bool, optional): If True, the 'X-VaultAPI-MigrationMode' header will be set.
+                                             Defaults to False.
 
         Returns:
-            dict: Dictionary containing operation results with 'responseStatus' and 'data'
-
-        Note:
-            The method uses the private __upsert method with operation="insert"
+            dict: The response from the Vault API, including the operation's status and the data of the
+                  newly created records.
         """
+       
         method_name:str = inspect.currentframe().f_code.co_name
         self.logger.debug(f"{method_name} called")
 
-        return self.__upsert(operation="insert", object=object, data=data, id_param=id_param)
+        return self.__upsert(operation="insert", object=object, data=data, id_param=id_param, migration_mode=migration_mode, no_triggers=no_triggers)
 
 
 
-    def __upsert(self, operation:str, object:str, data:list, id_param:str) -> dict:
-        """Internal method to handle insert and update operations with Vault.
+    def __upsert(self, operation:str, object:str, data:list, id_param:str, migration_mode:bool=False, no_triggers:bool=False) -> dict:
+        """A private method to handle both 'insert' and 'update' operations.
 
-        This private method processes batch operations for both insert and update
-        actions, handling chunking, HTTP requests, and response parsing.
+        This method chunks the data and sends it to the appropriate Vault API endpoint based on the
+        specified operation.
 
         Args:
-            operation (str): Type of operation - 'insert' or 'update'
-            object (str): API name of the Vault object to operate on
-            data (list): List of record dictionaries to process
-            id_param (str): Field name to use as identifier for the operation
+            operation (str): The operation to perform, either 'insert' or 'update'.
+            object (str): The API name of the target Vault object.
+            data (list): The list of records to process.
+            id_param (str): The external ID parameter to use, if any.
+            migration_mode (bool, optional): When True, the 'X-VaultAPI-MigrationMode' header is included.
+                                             Defaults to False.
 
         Returns:
-            dict: Dictionary containing operation results with 'responseStatus' and 'data'
-
-        Note:
-            This method is called by the public insert() and update() methods
+            dict: An aggregated response from the Vault API, summarizing the results of all chunks.
         """
-        
+       
 
         method_name:str = inspect.currentframe().f_code.co_name
         retval = self.__get_retval_instance()
@@ -353,6 +332,11 @@ class VaultConnector:
             "Authorization": self.session_id,
             "Content-Type": "application/json",
         }
+        if migration_mode:
+            request_headers['X-VaultAPI-MigrationMode'] = 'true'
+            
+        if no_triggers:
+            request_headers['X-VaultAPI-NoTriggers'] = 'true'
 
         chunks = self.__split_list(data, __class__.upsert_page_size)
 
@@ -389,19 +373,16 @@ class VaultConnector:
 
 
     def __split_list(self, list: list, chunk_size: int):
-        """Split a list into chunks of specified size.
-
-        This utility method divides a large list into smaller chunks to facilitate
-        batch processing for API operations that have size limitations.
+        """Splits a list into smaller chunks of a specified size.
 
         Args:
-            list (list): List to be split into chunks
-            chunk_size (int): Maximum size of each chunk
+            list (list): The list to be chunked.
+            chunk_size (int): The size of each chunk.
 
         Yields:
-            Iterator[list]: Generator yielding chunks of the original list
+            A generator that yields each chunk of the original list as a new list.
         """
-
+       
         method_name:str = inspect.currentframe().f_code.co_name
         retval = []
 
@@ -412,18 +393,18 @@ class VaultConnector:
 
     
     def __setup_logger(self, log_level:str, log_target:str) -> logging:
-        """Initialize and configure the logger instance.
+        """Configures and returns a logger instance.
 
-        Sets up logging with specified level and output target, including
-        formatting and handler configuration.
+        This private method sets up a logger with the specified level and target.
 
         Args:
-            log_level (str): Logging level ('debug', 'error', etc.)
-            log_target (str): Log output target - 'console' for stdout or filename for file logging
+            log_level (str): The desired logging level (e.g., 'debug', 'info').
+            log_target (str): Where to send the logs, either 'console' or a file path.
 
         Returns:
-            logging.Logger: Configured logger instance
+            logging.Logger: The fully configured logger instance.
         """
+       
 
         method_name:str = inspect.currentframe().f_code.co_name
 
@@ -443,13 +424,15 @@ class VaultConnector:
     
 
     def __get_retval_instance(self) -> dict:
-        """Create a standard return value structure for API responses.
+        """Initializes a standard dictionary for return values.
+
+        This private method creates a dictionary with 'responseStatus' and 'data' keys
+        to ensure consistent return formats across the class.
 
         Returns:
-            dict: Dictionary with empty response structure containing:
-                - responseStatus: empty string for status indication
-                - data: empty list for result data
+            dict: A dictionary with a default structure for API responses.
         """
+
 
         return {
             "responseStatus":"",
@@ -458,18 +441,19 @@ class VaultConnector:
         
         
     def __get_auth_profile(self, username: str) -> dict:
-        """Retrieve OAuth authentication profile for a given username.
+        """Discovers the OAuth authentication profile for a given user.
 
-        Queries the Vault user discovery endpoint to obtain authentication
-        details required for OAuth flow, including profile ID and token endpoint.
+        This private method queries the Vault discovery endpoint to find the user's
+        authentication profile, which is required for OAuth flows.
 
         Args:
-            username (str): Username (client ID) to discover auth profile for
+            username (str): The username for whom to discover the authentication profile.
 
         Returns:
-            dict: Dictionary containing 'id' (profile ID) and 'token_endpoint' on success,
-                  or empty dictionary on failure or if user doesn't use SSO authentication
+            dict: A dictionary with the profile 'id' and 'token_endpoint'. Returns an empty dictionary if
+                  the profile cannot be found or an error occurs.
         """
+
         
         method_name:str = inspect.currentframe().f_code.co_name
         
@@ -516,20 +500,21 @@ class VaultConnector:
         
     
     def __get_access_token(self, token_endpoint:str, client_id:str, client_secret:str, scopes:list) -> str:
-        """Obtain OAuth access token using client credentials flow.
+        """Requests an OAuth access token from the specified token endpoint.
 
-        Requests an access token from the OAuth token endpoint using
-        client credentials grant type with optional scopes.
+        This private method performs a POST request to the token endpoint with the
+        provided credentials to obtain an access token.
 
         Args:
-            token_endpoint (str): URL of the OAuth token endpoint
-            client_id (str): OAuth client identifier
-            client_secret (str): OAuth client secret
-            scopes (list): List of OAuth scope strings to request
+            token_endpoint (str): The URL of the OAuth token endpoint.
+            client_id (str): The client ID for the OAuth application.
+            client_secret (str): The client secret for the OAuth application.
+            scopes (list): A list of scopes to be requested for the access token.
 
         Returns:
-            str: Access token string on success, empty string on failure
+            str: The obtained access token. Returns an empty string if the request fails.
         """
+
         method_name: str = inspect.currentframe().f_code.co_name
         self.logger.debug(f"{method_name} - called")
         
@@ -591,20 +576,21 @@ class VaultConnector:
         
     
     def __get_vault_session_id_access_token(self, vault_host:str, oauth_oidc_profile_id:str, client_id:str, access_token:str) -> str:
-        """Exchange OAuth access token for Vault session ID.
+        """Exchanges an OAuth access token for a Vault session ID.
 
-        This method converts an OAuth access token into a Vault session ID
-        by calling the Vault OAuth session endpoint.
+        This private method sends the access token to Vault's authentication endpoint
+        to acquire a session ID for making authenticated API calls.
 
         Args:
-            vault_host (str): Vault hostname without protocol
-            oauth_oidc_profile_id (str): OAuth OIDC profile ID obtained from auth discovery
-            client_id (str): OAuth client ID
-            access_token (str): Valid OAuth access token
+            vault_host (str): The hostname of the target Vault instance.
+            oauth_oidc_profile_id (str): The ID of the OAuth/OIDC profile being used.
+            client_id (str): The client ID associated with the OAuth application.
+            access_token (str): The OAuth access token to be exchanged.
 
         Returns:
-            str: Vault session ID on success, empty string on failure
+            str: The Vault session ID. Returns an empty string if the exchange fails.
         """
+
         
         method_name: str = inspect.currentframe().f_code.co_name
         self.logger.debug(f"{method_name} - called")
